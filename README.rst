@@ -7,6 +7,8 @@ Works with any enum whose values are integers. Subclasses the IntegerField to st
 
 When creating/loading fixtures, values are serialized to dotted names, like "AnimalType.Cat" for the example below.
 
+A decorator is needed on Python enums in order to make them work with Django migrations, which require a deconstruct() method on the enum members.
+
 Installation::
 
 	pip install enum3field
@@ -14,8 +16,9 @@ Installation::
 Example::
 
 	import enum
-	from enum3field import EnumField
+	from enum3field import EnumField, django_enum
 
+	@django_enum
 	class AnimalType(enum.Enum):
 	  Cat = 1
 	  Dog = 2

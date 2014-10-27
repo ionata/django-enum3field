@@ -4,11 +4,16 @@
 # to store the enum as integers in the database. Serializes to dotted names
 # (e.g. AnimalType.Cat in the example below).
 #
+# A decorator is needed on Python enums in order to make them work with
+# Django migrations, which require a deconstruct() method on the enum
+# members.
+#
 # Example:
 #
 # import enum
-# from enum3field import EnumField
+# from enum3field import EnumField, django_enum
 #
+# @django_enum
 # class AnimalType(enum.Enum):
 #   Cat = 1
 #   Dog = 2
@@ -23,6 +28,20 @@ import enum
 
 from django.core import exceptions
 from django.db import models
+
+def django_enum(enum):
+  # In order to make the enumeration serializable for migrations, instance members
+  # must have a deconstruct method. But the enum class should not have a deconstruct
+  # method or else the serialization of the enum itself as the first argument to
+  # EnumField will fail. To achieve this, we added a deconstruct() method to the
+  # members after the enum members have been created.
+  def make_deconstructor(member):
+    def deconstruct():
+      return (enum.__module__ + '.' + enum.__name__, [member.value], {})
+    return deconstruct
+  for member in enum:
+    member.deconstruct = make_deconstructor(member)
+  return enum
 
 class EnumField(models.IntegerField, metaclass=models.SubfieldBase):
   """A Django model field for use with Python 3 enums. Usage: fieldname = EnumField(enum_class, ....)"""
