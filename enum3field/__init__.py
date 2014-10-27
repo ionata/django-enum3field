@@ -56,6 +56,11 @@ class EnumField(models.IntegerField, metaclass=models.SubfieldBase):
   description = "A value of the %(enum_class) enumeration."
 
   def get_prep_value(self, value):
+    # Normally value is an enumeration value. But when running `manage.py migrate`
+    # we may get a serialized value. Use to_python to coerce to an enumeration
+    # member as best as possible.
+    value = self.to_python(value)
+
     if value is not None:
       # Validate
       if not isinstance(value, self.enum_class):
