@@ -1,0 +1,2 @@
+include enum3field/__init__.py
+include LICENSE README.rst
