@@ -76,25 +76,21 @@ class EnumField(models.IntegerField, metaclass=models.SubfieldBase):
     if value is None or isinstance(value, self.enum_class):
       return value
 
-    # string (serialization) => enum member
-    if isinstance(value, str):
-      # String values must look like EnumName.MemberName. First strip
-      # the "EnumName." prefix if it exists.
-      prefix = self.enum_class.__name__ + "."
-      if value.startswith(prefix):
-        value = value[len(prefix):]
-
-      # Now try a member lookup by name.
+    # When serializing to create a fixture, the default serialization
+    # is to "EnumName.MemberName". Handle that.
+    prefix = self.enum_class.__name__ + "."
+    if isinstance(value, str) and value.startswith(prefix):
       try:
-        return self.enum_class[value]
+        return self.enum_class[value[len(prefix):]]
       except KeyError:
         raise exceptions.ValidationError(
-          "'%s' must be the name of a member of %s." % (value, self.enum_class),
+          "'%s' does not refer to a member of %s." % (value, self.enum_class),
           code='invalid',
           params={'value': value},
           )
 
-    # integer (db) => enum member
+    # We may also get string versions of the integer form from forms,
+    # and integers when querying a database.
     try:
       return self.enum_class(int(value))
     except ValueError:
