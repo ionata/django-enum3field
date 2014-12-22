@@ -28,6 +28,7 @@ import enum
 
 from django.core import exceptions
 from django.db import models
+from django.utils.functional import cached_property
 
 def django_enum(enum):
   # In order to make the enumeration serializable for migrations, instance members
@@ -109,3 +110,11 @@ class EnumField(models.IntegerField, metaclass=models.SubfieldBase):
     # Override the positional arguments info to include the enumeration class.
     tup = super(EnumField, self).deconstruct()
     return (tup[0], tup[1], [self.enum_class], tup[3])
+ 
+  @cached_property
+  def validators(self):
+    # IntegerField validators will not work on enum instances, and we don't need
+    # any validation beyond conversion to an enum instance (which is performed
+    # elsewhere), so we don't need to do any validation.
+    return []
+ 
