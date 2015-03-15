@@ -9,7 +9,7 @@ setup(
   author=u'Joshua Tauberer',
   author_email=u'jt@occams.info',
   packages=find_packages(),
-  url='https://github.com/joshdata/enum3field',
+  url='https://github.com/if-then-fund/django-enum3field',
   license='CC0 (copyright waived)',
   description='A Django 1.7+ model field for use with Python 3 enums.',
   long_description=open("README.rst").read(),
