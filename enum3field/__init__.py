@@ -10,34 +10,36 @@
 #
 # Example:
 #
-# import enum
-# from enum3field import EnumField, django_enum
+#    import enum
+#    from enum3field import EnumField
+#    from django.utils.translation import ugettext_lazy as _
 #
-# @django_enum
-# class AnimalType(enum.Enum):
-#   Cat = 1
-#   Dog = 2
-#   Turtle = 3
+#    class AnimalType(enum.Enum):
+#        Cat = 1
+#        Dog = 2
+#        Turtle = 3
 #
-# class Animal(models.Model):
-#   animalType = EnumField(AnimalType)
+#    @staticmethod
+#    def choices():  # optional, provided for translations, otherwise the choices list is create from the enum members.
+#        return (
+#            (AnimalType.Cat, _("A Cat.")),
+#            (AnimalType.Dog, _("A Dog.")),
+#            (AnimalType.Turtle, _("A Turtle.")),
+#        )
+#
+#    class Animal(models.Model):
+#        animalType = EnumField(AnimalType)
 #
 #####################################################
 from __future__ import absolute_import, unicode_literals
 
 from django import forms
-from django.core import exceptions
-from django.core import validators
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.forms.widgets import NumberInput
-from django.utils import formats
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 import enum
 from django.utils.six import with_metaclass
-from django.utils.deconstruct import deconstructible
-import types
 
 
 class EnumFormField(forms.TypedChoiceField):
@@ -51,11 +53,13 @@ class EnumFormField(forms.TypedChoiceField):
 
     def prepare_value(self, value):
         # return enum member.value
-        return value.value
+        if isinstance(value, (str, unicode)):
+            return self.field.to_python(value)
+        return str(value)
 
 
 class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
-    """A Django model field for use with Python 3 enums. Usage: fieldname = EnumField(enum_class, ....)"""
+    """A Django model field for use with Python 2.7+ Enum. Usage: fieldname = EnumField(enum_class, ....)"""
 
     description = _("Enum")
 
@@ -64,8 +68,8 @@ class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
     }
 
     def __init__(self, enum_class, *args, **kwargs):
-        if not issubclass(enum_class, enum.Enum) or issubclass(enum_class, enum.IntEnum):
-            raise ValueError("enum_class must be of the enum.Enum type and cannot be enum.IntEnum due to a serialisation issue.")
+        if not issubclass(enum_class, enum.Enum):
+            raise ValueError("enum_class must be of the enum.Enum type.")
 
         if not all([isinstance(member.value, int) for member in enum_class]):
             raise ValueError("enum_class members must have numeric values.")
@@ -92,7 +96,7 @@ class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
         if value is not None:
             # Validate
             if not isinstance(value, self.enum_class):
-                raise exceptions.ValidationError(
+                raise ValidationError(
                     "'%s' must be a member of %s." % (value, self.enum_class),
                     code='invalid',
                     params={'value': value},
@@ -116,7 +120,7 @@ class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
             try:
                 return self.enum_class[value[len(prefix):]]
             except KeyError:
-                raise exceptions.ValidationError(
+                raise ValidationError(
                     "'%s' does not refer to a member of %s." % (value, self.enum_class),
                     code='invalid',
                     params={'value': value},
@@ -127,7 +131,7 @@ class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
         try:
             return self.enum_class(int(value))
         except ValueError:
-            raise exceptions.ValidationError(
+            raise ValidationError(
                 "'%s' must be an integer value of %s." % (value, self.enum_class),
                 code='invalid',
                 params={'value': value},

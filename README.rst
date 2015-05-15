@@ -25,9 +25,9 @@ Example::
 	@staticmethod
 	def choices():  # optional, provided for translations, otherwise the choices list is create from the enum members.
 	    return (
-	        (AnimalType.Cat.value, _("A Cat.")),
-	        (AnimalType.Dog.value, _("A Dog.")),
-	        (AnimalType.Turtle.value, _("A Turtle.")),
+	        (AnimalType.Cat, _("A Cat.")),
+	        (AnimalType.Dog, _("A Dog.")),
+	        (AnimalType.Turtle, _("A Turtle.")),
 	    )
 
 	class Animal(models.Model):

@@ -12,7 +12,7 @@ if sys.version_info[0] < 3:
 
 setup(
     name='enum3field',
-    version='0.1.1',
+    version='0.1.2',
     author=u'Joshua Tauberer',
     author_email=u'jt@occams.info',
     packages=find_packages(),
