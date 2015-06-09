@@ -43,15 +43,24 @@ from django.utils.six import with_metaclass
 
 
 class EnumFormField(forms.TypedChoiceField):
-    def __init__(self, *args, **kwargs):
-        self.coerce = kwargs.pop('coerce', lambda val: self.default_coerce)
-        self.empty_value = kwargs.pop('empty_value', '')
-        super(EnumFormField, self).__init__(*args, **kwargs)
+    def __init__(self, enum_class, *args, **kwargs):
+        self.enum_class = enum_class
 
-    def default_coerce(self, value):
-        return self.enum_class(value)
+        self.choices = kwargs.pop('choices', self.enum_class.choices())
+        kwargs['coerce'] = lambda val: EnumFormField.deafult_coerce(self.enum_class, val)
+        self.empty_value = kwargs.pop('empty_value', '')
+        super(EnumFormField, self).__init__(self.choices, **kwargs)
+
+    #if not 'choices' in kwargs:
+    #    self.choices = kwargs['choices'] = self.enum_class.choices()
+    #self.coerce = kwargs['coerce'] = kwargs.get('coerce', lambda val: EnumFormField.deafult_coerce(self.enum_class(val)))
+
+    @classmethod
+    def deafult_coerce(cls, enum_class, value):
+        return EnumField.static_to_python(enum_class, value)
 
     def prepare_value(self, value):
+        return super(EnumFormField, self).prepare_value(value)
         # return enum member.value
         if isinstance(value, (str, unicode)):
             return self.field.to_python(value)
@@ -109,19 +118,23 @@ class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
         return super(EnumField, self).get_prep_value(value)
 
     def to_python(self, value):
+        return EnumField.static_to_python(self.enum_class, value)
+
+    @staticmethod
+    def static_to_python(enum_class, value):
         # handle None and values of the correct type already
-        if value is None or isinstance(value, self.enum_class):
+        if value is None or isinstance(value, enum_class):
             return value
 
         # When serializing to create a fixture, the default serialization
         # is to "EnumName.MemberName". Handle that.
-        prefix = self.enum_class.__name__ + "."
+        prefix = enum_class.__name__ + "."
         if isinstance(value, (str, unicode)) and value.startswith(prefix):
             try:
-                return self.enum_class[value[len(prefix):]]
+                return enum_class[value[len(prefix):]]
             except KeyError:
                 raise ValidationError(
-                    "'%s' does not refer to a member of %s." % (value, self.enum_class),
+                    "'%s' does not refer to a member of %s." % (value, enum_class),
                     code='invalid',
                     params={'value': value},
                 )
@@ -129,10 +142,10 @@ class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
         # We may also get string versions of the integer form from forms,
         # and integers when querying a database.
         try:
-            return self.enum_class(int(value))
+            return enum_class(int(value))
         except ValueError:
             raise ValidationError(
-                "'%s' must be an integer value of %s." % (value, self.enum_class),
+                "'%s' must be an integer value of %s." % (value, enum_class),
                 code='invalid',
                 params={'value': value},
             )
@@ -160,9 +173,11 @@ class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
         return []
 
     def formfield(self, **kwargs):
+        def wrapper(**defaults):
+            return EnumFormField(self.enum_class, **defaults)
         defaults = {
-            'form_class': EnumFormField,
-            'choices_form_class': EnumFormField,
+            'form_class': wrapper,
+            'choices_form_class': wrapper,
         }
         defaults.update(kwargs)
         return super(EnumField, self).formfield(**defaults)
