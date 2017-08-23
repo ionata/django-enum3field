@@ -39,7 +39,7 @@ from django.db import models
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 import enum
-from django.utils.six import with_metaclass
+from django.utils.six import string_types, with_metaclass
 
 
 class EnumFormField(forms.TypedChoiceField):
@@ -62,7 +62,7 @@ class EnumFormField(forms.TypedChoiceField):
     def prepare_value(self, value):
         return super(EnumFormField, self).prepare_value(value)
         # return enum member.value
-        if isinstance(value, (str, unicode)):
+        if isinstance(value, string_types):
             return self.field.to_python(value)
         return str(value)
 
@@ -129,7 +129,7 @@ class EnumField(with_metaclass(models.SubfieldBase, models.IntegerField)):
         # When serializing to create a fixture, the default serialization
         # is to "EnumName.MemberName". Handle that.
         prefix = enum_class.__name__ + "."
-        if isinstance(value, (str, unicode)) and value.startswith(prefix):
+        if isinstance(value, string_types) and value.startswith(prefix):
             try:
                 return enum_class[value[len(prefix):]]
             except KeyError:
